@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
@@ -204,7 +204,300 @@
     update();
   </script>
 </body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>WiFi Builder Game — Evolved Dot</title>
+  <style>
+    body { margin:0; background:#f5f5f5; font-family:Arial, sans-serif; }
+
+    #gameWrapper {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 400px;
+      height: 400px;
+      cursor: move;
+      z-index: 9999;
+      background: #222;
+      border:2px solid #333;
+      border-radius:8px;
+      overflow: hidden;
+    }
+
+    #gameCanvas { 
+      width: 100%; 
+      height: 100%; 
+      display:block;
+    }
+
+    
+
+    /* Minimize button */
+    #minimizeBtn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 22px;
+      text-align: center;
+    }
+
+    /* Minimized state */
+    #gameWrapper.minimized {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    #gameWrapper.minimized canvas {
+      display: none;
+    }
+    #gameWrapper.minimized #minimizeBtn {
+      display: none;
+    }
+    #miniIcon {
+      display: none;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #BDFD2A;
+    }
+    #gameWrapper.minimized #miniIcon {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrapper">
+    <button id="minimizeBtn">–</button>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div id="miniIcon"></div>
+  </div>
+
+  <script>
+    const wrapper = document.getElementById("gameWrapper");
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const minimizeBtn = document.getElementById("minimizeBtn");
+    const miniIcon = document.getElementById("miniIcon");
+
+    /* ----------- Drag System ----------- */
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    wrapper.addEventListener("mousedown", (e) => {
+      if (e.target === minimizeBtn) return; // skip drag if button clicked
+      isDragging = true;
+      offsetX = e.clientX - wrapper.offsetLeft;
+      offsetY = e.clientY - wrapper.offsetTop;
+    });
+
+    document.addEventListener("mouseup", () => isDragging = false);
+
+    document.addEventListener("mousemove", (e) => {
+      if (isDragging) {
+        wrapper.style.left = (e.clientX - offsetX) + "px";
+        wrapper.style.top = (e.clientY - offsetY) + "px";
+        wrapper.style.bottom = "auto"; 
+        wrapper.style.right = "auto"; 
+      }
+    });
+    /* ----------------------------------- */
+
+    /* -------- Minimize/Maximize -------- */
+    minimizeBtn.addEventListener("click", () => {
+      wrapper.classList.add("minimized");
+    });
+
+    miniIcon.addEventListener("click", () => {
+      wrapper.classList.remove("minimized");
+    });
+    /* ----------------------------------- */
+
+    /* ----------------- Game Code ----------------- */
+    const colors = ["#BDFD2A","blue","green","yellow"];
+    const dot = { x: canvas.width/2, y: canvas.height-60, radius: 10, color: "#BDFD2A" };
+
+    let arcs = [];         
+    let userArcs = [];     
+    let score = 0;
+    let level = 1;
+    let stackCount = 0;
+    let gameOver = false;
+    let speed = 3.5;
+    let isClearing = false;
+
+    function createArc() {
+      const size = [20,30,40][Math.floor(Math.random()*3)];
+      const x = Math.random() * (canvas.width - size*2) + size;
+      return { x, y:-20, color: colors[Math.floor(Math.random()*colors.length)], size };
+    }
+
+    function drawDot() {
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI*2);
+      ctx.fillStyle = dot.color;
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawArc(arc) {
+      const startAngle = Math.PI / 6 - Math.PI / 3; 
+      const endAngle = Math.PI / 2 + Math.PI / 1.5;
+      ctx.beginPath();
+      ctx.arc(arc.x, arc.y, arc.size, startAngle, endAngle, true); 
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = arc.color;
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    function drawUserArcs() {
+      for (let i = 0; i < userArcs.length; i++) {
+        const a = userArcs[i];
+        ctx.save();
+        ctx.globalAlpha = (typeof a.opacity === 'number') ? a.opacity : 1;
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, 40 + i*25, Math.PI / 2 + Math.PI / 1.5,Math.PI / 6 - Math.PI / 3);
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = a.color;
+        ctx.stroke();
+        ctx.closePath();
+        ctx.restore();
+      }
+    }
+
+    function drawFinalWiFi() {
+      const radii = [40, 70, 100];
+      for (let i=0;i<radii.length;i++){
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, radii[i], Math.PI / 2 + Math.PI / 1.5, Math.PI / 6 - Math.PI / 3);
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = '#BDFD2A';
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI*2);
+      ctx.fillStyle = '#BDFD2A';
+      ctx.fill();
+    }
+
+    function update() {
+      if (gameOver) {
+        ctx.fillStyle = "white";
+        ctx.font = "26px Arial";
+        ctx.fillText("Game Over", 120, 300);
+        ctx.font = "16px Arial";
+        ctx.fillText("Score: "+score, 150, 340);
+        ctx.fillText("Press F5 to restart", 110, 370);
+        return;
+      }
+
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      drawDot();
+      drawUserArcs();
+
+      for (let i = arcs.length-1; i >= 0; i--) {
+        const arc = arcs[i];
+        arc.y += speed;
+        drawArc(arc);
+
+        if (!isClearing && arc.y + 6 >= dot.y - dot.radius && arc.x >= dot.x - 25 && arc.x <= dot.x + 25) {
+          if (arc.color === dot.color) {
+            score += 10;
+            userArcs.push({ color: arc.color, size: arc.size, opacity: 1 });
+            arcs.splice(i,1);
+            stackCount++;
+
+            if (stackCount >= 3) {
+              stackCount = 0;
+              const oldColor = dot.color;
+              let newColor;
+              do { newColor = colors[Math.floor(Math.random()*colors.length)]; } while (newColor === oldColor);
+              dot.color = newColor;
+              level++;
+              clearUserArcsWithFade();
+            }
+          } else {
+            gameOver = true;
+          }
+        }
+
+        if (arc.y > canvas.height + 50) {
+          arcs.splice(i,1);
+        }
+      }
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "16px Arial";
+      ctx.fillText("Score: "+score, 18, 28);
+      ctx.fillText("Level: "+level, canvas.width-88, 28);
+
+      if (level > 1) {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        drawFinalWiFi();
+        ctx.fillStyle = "#fff";
+        ctx.font = "20px Arial";
+        ctx.fillText("Read more on this Link", 88, 120);
+        ctx.fillText("Score: " + score, 150, 150);
+        gameOver = true;
+        return;
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    function clearUserArcsWithFade() {
+      if (isClearing) return;
+      isClearing = true;
+      const steps = 12;
+      let cur = 0;
+      const iv = setInterval(() => {
+        cur++;
+        for (let i=0;i<userArcs.length;i++){
+          userArcs[i].opacity = Math.max(0, 1 - cur/steps);
+        }
+        if (cur >= steps) {
+          clearInterval(iv);
+          userArcs = [];      
+          isClearing = false;
+        }
+      }, 30);
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" && dot.x > 30) dot.x -= 30;
+      if (e.key === "ArrowRight" && dot.x < canvas.width-30) dot.x += 30;
+    });
+
+    setInterval(() => {
+      if (!gameOver) arcs.push(createArc());
+    }, 1200);
+
+    update();
+  </script>
+</body>
 </html>
+
+
+
+
+
+
 
 <!-- <!DOCTYPE html>
 <html lang="en">
