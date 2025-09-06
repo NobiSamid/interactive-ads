@@ -15,8 +15,8 @@
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    const colors = ["red","blue","green","yellow"];
-    const dot = { x: canvas.width/2, y: canvas.height-60, radius: 20, color: "red" };
+    const colors = ["#BDFD2A","blue","green","yellow"];
+    const dot = { x: canvas.width/2, y: canvas.height-60, radius: 10, color: "#BDFD2A" };
 
     let arcs = [];         // falling arcs
     let userArcs = [];     // stacked arcs that sit on dot (each: {color,size,opacity})
@@ -48,7 +48,7 @@
       // const endAngle = Math.PI;
       ctx.beginPath();
       ctx.arc(arc.x, arc.y, arc.size, startAngle, endAngle, true); // 60-degree approx
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 10;
       ctx.strokeStyle = arc.color;
       ctx.stroke();
       ctx.closePath();
@@ -62,7 +62,7 @@
         ctx.globalAlpha = (typeof a.opacity === 'number') ? a.opacity : 1;
         ctx.beginPath();
         ctx.arc(dot.x, dot.y, 40 + i*25, Math.PI / 2 + Math.PI / 1.5,Math.PI / 6 - Math.PI / 3);
-        ctx.lineWidth = 6;
+        ctx.lineWidth = 10;
         ctx.strokeStyle = a.color;
         ctx.stroke();
         ctx.closePath();
@@ -72,18 +72,18 @@
 
     // final wifi logo (called when win)
     function drawFinalWiFi() {
-      const logoColors = ["red","blue","green"];
+      // const logoColors = ["#BDFD2A","#BDFD2A","#BDFD2A"];
       const radii = [40, 70, 100];
       for (let i=0;i<radii.length;i++){
         ctx.beginPath();
         ctx.arc(dot.x, dot.y, radii[i], Math.PI / 2 + Math.PI / 1.5, Math.PI / 6 - Math.PI / 3);
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = logoColors[i];
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = '#BDFD2A';
         ctx.stroke();
       }
       ctx.beginPath();
       ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI*2);
-      ctx.fillStyle = logoColors[0];
+      ctx.fillStyle = '#BDFD2A';
       ctx.fill();
     }
 
