@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
@@ -43,9 +43,8 @@
     }
 
     function drawArc(arc) {
-       const startAngle = Math.PI / 6 - Math.PI / 3; // 60° centered on top
+      const startAngle = Math.PI / 6 - Math.PI / 3; // 60° centered on top
       const endAngle = Math.PI / 2 + Math.PI / 1.5;
-      // const endAngle = Math.PI;
       ctx.beginPath();
       ctx.arc(arc.x, arc.y, arc.size, startAngle, endAngle, true); // 60-degree approx
       ctx.lineWidth = 10;
@@ -156,12 +155,12 @@
       ctx.fillText("Level: "+level, canvas.width-88, 28);
 
       // win condition (optional): after level > 3 show final logo
-      if (level > 3) {
+      if (level > 1) {
         ctx.clearRect(0,0,canvas.width,canvas.height);
         drawFinalWiFi();
         ctx.fillStyle = "#fff";
         ctx.font = "20px Arial";
-        ctx.fillText("🎉 WiFi Logo Built!", 88, 120);
+        ctx.fillText("Read more on this Link", 88, 120);
         ctx.fillText("Score: " + score, 150, 150);
         gameOver = true;
         return;
@@ -206,3 +205,142 @@
   </script>
 </body>
 </html>
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>WiFi Builder Game — Stack 3 Arcs</title>
+  <style>
+    body { margin:0; background:#111; display:flex; align-items:center; justify-content:center; height:100vh; color:#fff; font-family:Arial, sans-serif; }
+    canvas { background:#222; border:2px solid #333; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Colors for falling arcs
+    const COLORS = ["#BDFD2A", "#FF3B3B", "#3BA9FF", "#FFD93B", "#9D3BFF"];
+
+    const TARGET_COLOR = "#BDFD2A"; // dot + valid arcs
+    const dot = { x: canvas.width/2, y: canvas.height-60, radius: 10, color: TARGET_COLOR };
+
+    let arcs = [];
+    let userArcs = [];
+    let score = 0;
+    let gameOver = false;
+    let youWin = false;
+    let speed = 3.5;
+
+    function createArc() {
+      const size = [20,30,40][Math.floor(Math.random()*3)];
+      const x = Math.random() * (canvas.width - size*2) + size;
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      return { x, y:-20, color, size };
+    }
+
+    function drawDot() {
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI*2);
+      ctx.fillStyle = dot.color;
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawArc(arc) {
+      const startAngle = Math.PI / 6 - Math.PI / 3; // 60° centered on top
+      const endAngle = Math.PI / 2 + Math.PI / 1.5;
+      ctx.beginPath();
+      ctx.arc(arc.x, arc.y, arc.size, endAngle, startAngle);
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = arc.color;
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    function drawUserArcs() {
+      for (let i = 0; i < userArcs.length; i++) {
+        const a = userArcs[i];
+        const startAngle = Math.PI / 6 - Math.PI / 3; // 60° centered on top
+        const endAngle = Math.PI / 2 + Math.PI / 1.5;
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, 40 + i*25, endAngle, startAngle);
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = a.color;
+        ctx.stroke();
+        ctx.closePath();
+      }
+    }
+
+    function update() {
+      if (gameOver || youWin) {
+        ctx.fillStyle = "white";
+        ctx.font = "26px Arial";
+        if (youWin) {
+          ctx.fillText("🎉 You Win! 🎉", 110, 300);
+        } else {
+          ctx.fillText("Game Over", 120, 300);
+        }
+        ctx.font = "16px Arial";
+        ctx.fillText("Score: " + score, 150, 340);
+        ctx.fillText("Press F5 to restart", 110, 370);
+        return;
+      }
+
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      drawDot();
+      drawUserArcs();
+
+      for (let i = arcs.length-1; i >= 0; i--) {
+        const arc = arcs[i];
+        arc.y += speed;
+        drawArc(arc);
+
+        // collision detection
+        if (arc.y + 6 >= dot.y - dot.radius && arc.x >= dot.x - 25 && arc.x <= dot.x + 25) {
+          if (arc.color === TARGET_COLOR) {
+            score += 10;
+            userArcs.push({ color: arc.color, size: arc.size });
+            arcs.splice(i,1);
+
+            // check win condition
+            if (userArcs.length >= 3) {
+              youWin = true;
+            }
+          } else {
+            gameOver = true;
+          }
+        }
+
+        if (arc.y > canvas.height + 50) arcs.splice(i,1);
+      }
+
+      // HUD
+      ctx.fillStyle = "#fff";
+      ctx.font = "16px Arial";
+      ctx.fillText("Score: " + score, 18, 28);
+
+      requestAnimationFrame(update);
+    }
+
+    // controls
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" && dot.x > 30) dot.x -= 30;
+      if (e.key === "ArrowRight" && dot.x < canvas.width-30) dot.x += 30;
+    });
+
+    // spawn arcs
+    setInterval(() => {
+      if (!gameOver && !youWin) arcs.push(createArc());
+    }, 1200);
+
+    // start the loop
+    update();
+  </script>
+</body>
+</html> -->
