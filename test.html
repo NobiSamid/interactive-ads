@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>WiFi Builder Game — Evolved Dot</title>
+  <style>
+    body { margin:0; background:#111; display:flex; align-items:center; justify-content:center; height:100vh; color:#fff; font-family:Arial, sans-serif; }
+    canvas { background:#222; border:2px solid #333; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const colors = ["red","blue","green","yellow"];
+    const dot = { x: canvas.width/2, y: canvas.height-60, radius: 20, color: "red" };
+
+    let arcs = [];         // falling arcs
+    let userArcs = [];     // stacked arcs that sit on dot (each: {color,size,opacity})
+    let score = 0;
+    let level = 1;
+    let stackCount = 0;
+    let gameOver = false;
+    let speed = 3.5;
+
+    let isClearing = false; // flag while we're clearing old stacked arcs
+
+    function createArc() {
+      const size = [20,30,40][Math.floor(Math.random()*3)];
+      const x = Math.random() * (canvas.width - size*2) + size;
+      return { x, y:-20, color: colors[Math.floor(Math.random()*colors.length)], size };
+    }
+
+    function drawDot() {
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI*2);
+      ctx.fillStyle = dot.color;
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawArc(arc) {
+       const startAngle = Math.PI / 6 - Math.PI / 3; // 60° centered on top
+      const endAngle = Math.PI / 2 + Math.PI / 1.5;
+      // const endAngle = Math.PI;
+      ctx.beginPath();
+      ctx.arc(arc.x, arc.y, arc.size, startAngle, endAngle, true); // 60-degree approx
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = arc.color;
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    // draw stacked arcs around the dot; respect arc.opacity
+    function drawUserArcs() {
+      for (let i = 0; i < userArcs.length; i++) {
+        const a = userArcs[i];
+        ctx.save();
+        ctx.globalAlpha = (typeof a.opacity === 'number') ? a.opacity : 1;
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, 40 + i*25, Math.PI / 2 + Math.PI / 1.5,Math.PI / 6 - Math.PI / 3);
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = a.color;
+        ctx.stroke();
+        ctx.closePath();
+        ctx.restore();
+      }
+    }
+
+    // final wifi logo (called when win)
+    function drawFinalWiFi() {
+      const logoColors = ["red","blue","green"];
+      const radii = [40, 70, 100];
+      for (let i=0;i<radii.length;i++){
+        ctx.beginPath();
+        ctx.arc(dot.x, dot.y, radii[i], Math.PI / 2 + Math.PI / 1.5, Math.PI / 6 - Math.PI / 3);
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = logoColors[i];
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI*2);
+      ctx.fillStyle = logoColors[0];
+      ctx.fill();
+    }
+
+    function update() {
+      if (gameOver) {
+        ctx.fillStyle = "white";
+        ctx.font = "26px Arial";
+        ctx.fillText("Game Over", 120, 300);
+        ctx.font = "16px Arial";
+        ctx.fillText("Score: "+score, 150, 340);
+        ctx.fillText("Press F5 to restart", 110, 370);
+        return;
+      }
+
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      // draw player and stacked arcs
+      drawDot();
+      drawUserArcs();
+
+      // falling arcs
+      for (let i = arcs.length-1; i >= 0; i--) {
+        const arc = arcs[i];
+        arc.y += speed;
+        drawArc(arc);
+
+        // collision: when arc reaches dot area
+        if (!isClearing && arc.y + 6 >= dot.y - dot.radius && arc.x >= dot.x - 25 && arc.x <= dot.x + 25) {
+          if (arc.color === dot.color) {
+            // matched
+            score += 10;
+
+            // push to userArcs (opacity default 1)
+            userArcs.push({ color: arc.color, size: arc.size, opacity: 1 });
+
+            arcs.splice(i,1);
+            stackCount++;
+
+            // if 3 stacked -> level up and clear stacked arcs
+            if (stackCount >= 3) {
+              stackCount = 0;
+
+              // Immediately change dot color (user wanted color reset immediately)
+              // pick a new color that's different from current
+              const oldColor = dot.color;
+              let newColor;
+              do { newColor = colors[Math.floor(Math.random()*colors.length)]; } while (newColor === oldColor);
+              dot.color = newColor;
+              level++;
+
+              // start clearing animation for userArcs
+              clearUserArcsWithFade();
+            }
+          } else {
+            // mismatch -> game over
+            gameOver = true;
+          }
+        }
+
+        // remove arrows that fell off-screen
+        if (arc.y > canvas.height + 50) {
+          arcs.splice(i,1);
+        }
+      }
+
+      // HUD
+      ctx.fillStyle = "#fff";
+      ctx.font = "16px Arial";
+      ctx.fillText("Score: "+score, 18, 28);
+      ctx.fillText("Level: "+level, canvas.width-88, 28);
+
+      // win condition (optional): after level > 3 show final logo
+      if (level > 3) {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        drawFinalWiFi();
+        ctx.fillStyle = "#fff";
+        ctx.font = "20px Arial";
+        ctx.fillText("🎉 WiFi Logo Built!", 88, 120);
+        ctx.fillText("Score: " + score, 150, 150);
+        gameOver = true;
+        return;
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    // fade out animation for userArcs then clear array
+    function clearUserArcsWithFade() {
+      if (isClearing) return;
+      isClearing = true;
+      const steps = 12;
+      let cur = 0;
+      const iv = setInterval(() => {
+        cur++;
+        // decrease opacity
+        for (let i=0;i<userArcs.length;i++){
+          userArcs[i].opacity = Math.max(0, 1 - cur/steps);
+        }
+        if (cur >= steps) {
+          clearInterval(iv);
+          userArcs = [];      // clear stacked arcs
+          isClearing = false;
+        }
+      }, 30);
+    }
+
+    // controls
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" && dot.x > 30) dot.x -= 30;
+      if (e.key === "ArrowRight" && dot.x < canvas.width-30) dot.x += 30;
+    });
+
+    // spawn arcs
+    setInterval(() => {
+      if (!gameOver) arcs.push(createArc());
+    }, 1200);
+
+    // start the loop
+    update();
+  </script>
+</body>
+</html>
