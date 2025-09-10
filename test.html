@@ -236,7 +236,36 @@
       display:block;
     }
 
-    
+
+       /* Intro screen */
+    #introScreen {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 400px;
+      height: 400px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #333;
+      border-radius: 8px;
+      z-index: 10000;
+    }
+    #introScreen img {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+    }
+
+    .fade-out {
+      animation: fadeOut 1s forwards;
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
 
     /* Minimize button */
     #minimizeBtn {
@@ -281,6 +310,10 @@
   </style>
 </head>
 <body>
+    <!-- Intro Screen -->
+  <div id="introScreen">
+    <img src="add.jpeg" alt="Intro Image"/>
+  </div>
   <div id="gameWrapper">
     <button id="minimizeBtn">–</button>
     <canvas id="gameCanvas" width="400" height="400"></canvas>
@@ -293,6 +326,16 @@
     const ctx = canvas.getContext("2d");
     const minimizeBtn = document.getElementById("minimizeBtn");
     const miniIcon = document.getElementById("miniIcon");
+
+     /* Show intro for 3 seconds */
+    setTimeout(() => {
+      introScreen.classList.add("fade-out");
+      setTimeout(() => {
+        introScreen.style.display = "none";
+        wrapper.style.display = "block";
+        update(); // গেম শুরু
+      }, 1000);
+    }, 3000);
 
     /* ----------- Drag System ----------- */
     let isDragging = false;
